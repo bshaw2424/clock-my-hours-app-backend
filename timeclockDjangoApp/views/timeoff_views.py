@@ -39,7 +39,6 @@ def timeoff_index(request):
 
 # insert new time route
 def new_timeoff(request):
-    # return HttpResponse("timeoff creating new form")
     if request.method == 'POST':
         user = request.session.get('user_id')
 
@@ -55,7 +54,7 @@ def new_timeoff(request):
         
         # query the company table to get the company_id for user add a record
         with connection.cursor() as cursor:
-            cursor.execute('SELECT id FROM company WHERE user_id = %s', [user])
+            cursor.execute('SELECT id FROM companies WHERE user_id = %s', [user])
             get_company_userId = cursor.fetchall()
 
             if get_company_userId:
@@ -83,7 +82,43 @@ def timeoff_details(request, id):
     return HttpResponse("timeoff details")
 
 def update_timeoff(request, id):
-    return HttpResponse("timeoff update")
+   # return HttpResponse("timeoff update")
+   if request.method == 'POST':
+       # user session
+       user = request.session.get('user_id')
+       data = json.loads(request.body)
+
+       vacation = data.POST.get('vacation_hours', '').strip()
+       sick_hours = data.POST.get('sick_hours', '').strip()
+       dayoff = data.POST.get('dayoff_type', '').strip()
+
+
+       if not user:
+           return JsonResponse({'status': 'error', 'message': 'User is not available'})
+       
+       if vacation and sick_hours and dayoff:
+           try:
+                with connection.cursor() as cursor:
+                    cursor.execute('UPDATE time_off SET vacation_hours = %s, sick_hours = %s, dayoff_type = %s WHERE user_id = %s', [vacation, sick_hours, dayoff, user])
+                    return JsonResponse({'status': 'success', 'message': 'Time Off Data Updated Successfully!'})
+           except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)})
+       else:
+           return JsonResponse({'status': 'error', 'message': 'Input Fields Cannot Be Empty!'})
+   return JsonResponse({'status': 'error', 'message': 'Request Method Invalid'})
 
 def delete_timeoff(request, id):
-    return HttpResponse("timeoff delete")
+    # return HttpResponse("timeoff delete")
+    if request.method == 'POST':
+        user = request.session.get('user_id')
+
+        if not user:
+            return JsonResponse({'status': 'error', 'message': 'User Must be Logged in'})
+        
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('DELETE FROM time_off WHERE user_id = %s AND id = %s', [user, id])
+                return JsonResponse({'status': 'success', 'message': 'Deleted Successfully!'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Failed to Delete: ' + str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Request Method Invalid'})
